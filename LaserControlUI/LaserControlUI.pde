@@ -7,6 +7,7 @@ ControlP5 ui;
 Slider sliderR;
 Slider sliderG;
 Slider sliderB;
+CheckBox blankCheckbox;
 
 final int baudSpeed   =  230400;
 final int waitToStart = 2000;
@@ -16,6 +17,7 @@ int lf = 10; // ASCII linefeed
 boolean connected = false;
 
 long lastSend = 0;
+int blanking = 0; // blanking off
 
 void setup()
 {
@@ -33,6 +35,16 @@ void setup()
      .setPosition(20,60)
      .setSize(200,15)
      .setRange(0,255);
+     
+    // add blanking checkbox    
+    blankCheckbox = ui.addCheckBox("blanking")
+                .setPosition(20, 100)
+                .setSize(30, 30)
+                .setItemsPerRow(3)
+                .setSpacingColumn(30)
+                .setSpacingRow(20)
+                .addItem("blank", 1);
+                
       
     String portName = "COM6";//Serial.list()[0];
     serial = new Serial(this, portName, baudSpeed);
@@ -54,6 +66,11 @@ void draw()
        fill(0,255,0);
        text("connected to esp32", 20,95);
    }
+   if(blankCheckbox.getItem(0).getValue()==1)
+   {
+     fill(255-sliderR.getValue(), 255-sliderG.getValue(), 255-sliderB.getValue());
+     text("BLANKING",width/2-40,height/2);
+   }
      
 }
 
@@ -63,9 +80,9 @@ void sendCol(int r, int g, int b)
     {      
         if(millis() - lastSend > 50)
         {
-            String sendStr = str(b) + "," + str(g) + "," + str(r) + "\n";
+            String sendStr = str(g) + "," + str(b) + "," + str(r) + "\n";
             serial.write( sendStr );
-            println("SENT:" + str(b) + "," + str(g) + "," + str(r) );
+            println("SENT:" + str(r) + "," + str(g) + "," + str(b) );
             lastSend = millis();
         }
     }
@@ -99,10 +116,26 @@ void keyPressed()
 
 void controlEvent(ControlEvent theEvent) 
 {
+  int newBlank = (int) blankCheckbox.getItem(0).getValue();
+  
+  if(newBlank != blanking)
+  {
+    if(newBlank == 1)    
+      sendCol(0,0,0); 
+    else
+     sendCol( (int)sliderR.getValue(), (int)sliderG.getValue() , (int)sliderB.getValue());  
+      
+    blanking = newBlank;
+  }
+  
  
- if(theEvent.isController()) 
- {    
-   sendCol( (int)sliderR.getValue(), (int)sliderG.getValue() , (int)sliderB.getValue());  
- } 
+ if(blanking == 0)
+ {
+   if(theEvent.isController()) 
+   {    
+     sendCol( (int)sliderR.getValue(), (int)sliderG.getValue() , (int)sliderB.getValue());  
+   } 
+ }
+ 
 }
  
